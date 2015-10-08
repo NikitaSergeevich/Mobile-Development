@@ -21,7 +21,7 @@ public class CreateModify extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_modify);
 
-        final Button b = (Button)findViewById(R.id.create_modify_button);
+        final Button b = (Button)findViewById(R.id.create);
         b.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -29,9 +29,9 @@ public class CreateModify extends AppCompatActivity {
                 ProjectDbHelper mDbHelper = new ProjectDbHelper(getApplicationContext());
                 // Gets the data repository in write mode
                 SQLiteDatabase db = mDbHelper.getWritableDatabase();
-                String title = ((EditText) findViewById(R.id.create_modify_title)).getText().toString();
-                String description = ((EditText) findViewById(R.id.create_modify_title)).getText().toString();
-                String author = ((EditText) findViewById(R.id.create_modify_author)).getText().toString();
+                String title = ((EditText) findViewById(R.id.project_form_name)).getText().toString();
+                String description = ((EditText) findViewById(R.id.project_form_description)).getText().toString();
+                String author = ((EditText) findViewById(R.id.project_form_author)).getText().toString();
                 final ContentValues values = new ContentValues();
                 values.put(ProjectContract.ProjectEntry.COLUMN_NAME_TITLE, title + " ");
                 values.put(ProjectContract.ProjectEntry.COLUMN_NAME_DESCRIPTION, description + " ");

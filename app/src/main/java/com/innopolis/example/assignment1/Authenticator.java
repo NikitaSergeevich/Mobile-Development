@@ -54,28 +54,20 @@ public class Authenticator extends AbstractAccountAuthenticator {
         final AccountManager am = AccountManager.get(mContext);
         final String password = am.getPassword(account);
         final Bundle result = new Bundle();
-        String res = "";
+        boolean res = false;
 
         try {
-            res = sServerAuthenticate.userSignIn(account.name, password, authTokenType);
+            res = sServerAuthenticate.userSignIn(account.name, password);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        if (res.equals("OK")) {
+        if (res == true) {
             result.putString(AccountManager.KEY_ACCOUNT_NAME, account.name);
             result.putString(AccountManager.KEY_ACCOUNT_TYPE, account.type);
             result.putString(AccountManager.KEY_AUTHTOKEN, "OK");
             return result;
         }
-
-        final Intent intent = new Intent(mContext, LoginActivity.class);
-        intent.putExtra(AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE, response);
-        intent.putExtra(LoginActivity.ARG_ACCOUNT_TYPE, account.type);
-        intent.putExtra(LoginActivity.ARG_AUTH_TYPE, authTokenType);
-        intent.putExtra(LoginActivity.ARG_ACCOUNT_NAME, account.name);
-
-        result.putParcelable(AccountManager.KEY_INTENT, intent);
         return bundle;
     }
 

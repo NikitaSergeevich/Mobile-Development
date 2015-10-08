@@ -2,7 +2,11 @@ package com.innopolis.example.assignment1;
 
 import android.accounts.Account;
 import android.accounts.AccountAuthenticatorActivity;
+import android.app.DialogFragment;
+import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
@@ -13,33 +17,21 @@ import static com.innopolis.example.assignment1.AccountGeneral.sServerAuthentica
 
 public class LoginActivity extends AccountAuthenticatorActivity {
     private AccountManager mAccountManager;
-
-    public final static String ARG_ACCOUNT_TYPE = "ACCOUNT_TYPE";
-    public final static String ARG_AUTH_TYPE = "AUTH_TYPE";
-    public final static String ARG_ACCOUNT_NAME = "ACCOUNT_NAME";
-    public final static String ARG_IS_ADDING_NEW_ACCOUNT = "IS_ADDING_ACCOUNT";
-    public static final String KEY_ERROR_MESSAGE = "ERR_MSG";
-    public final static String PARAM_USER_PASS = "USER_PASS";
-
+    private DialogFragment dialog;
     private final int REQ_SIGNUP = 1;
-
-    private String mAuthTokenType;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.login);
-        mAccountManager = AccountManager.get(getBaseContext());
-
-        String accountName = getIntent().getStringExtra(ARG_ACCOUNT_NAME);
-        mAuthTokenType = getIntent().getStringExtra(ARG_AUTH_TYPE);
-        if (mAuthTokenType == null)
-            mAuthTokenType = AccountGeneral.AUTHTOKEN_TYPE_FULL_ACCESS;
-
-        if (accountName != null) {
-            ((TextView) findViewById(R.id.accountName)).setText(accountName);
+        dialog = new NetworkDialog();
+        dialog.setCancelable(false);
+        if (!networkcheck(this))
+        {
+            dialog.show(getFragmentManager(), "Connecting to Network");
         }
 
+        mAccountManager = AccountManager.get(this);
         findViewById(R.id.login).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -51,7 +43,7 @@ public class LoginActivity extends AccountAuthenticatorActivity {
             @Override
             public void onClick(View v) {
                 Intent signup = new Intent(getBaseContext(), SignUpActivity.class);
-                signup.putExtras(getIntent().getExtras());
+                //signup.putExtras(getIntent().getExtras());
                 startActivityForResult(signup, REQ_SIGNUP);
             }
         });
@@ -66,29 +58,45 @@ public class LoginActivity extends AccountAuthenticatorActivity {
             super.onActivityResult(requestCode, resultCode, data);
     }
 
+    private boolean networkcheck(Context context)
+    {
+        ConnectivityManager connMgr	= (ConnectivityManager)
+                getSystemService(context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo	=
+                connMgr.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+        boolean	isWifiConn = networkInfo.isConnected();
+        networkInfo	= connMgr.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
+        boolean	isMobileConn = networkInfo.isConnected();
+
+        if (isWifiConn == true | isMobileConn == true)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
 
     public void submit() {
 
         final String userName = ((TextView) findViewById(R.id.accountName)).getText().toString();
-        final String userPass = ((TextView) findViewById(R.id.accountPassword)).getText().toString();
-        final String accountType = getIntent().getStringExtra(ARG_ACCOUNT_TYPE);
+        final String userPassword = ((TextView) findViewById(R.id.accountPassword)).getText().toString();
 
         new AsyncTask<String, Void, Intent>() {
 
             @Override
             protected Intent doInBackground(String... params) {
-                String authtoken = null;
                 Bundle data = new Bundle();
+                boolean result = false;
                 try {
-                    authtoken = sServerAuthenticate.userSignIn(userName, userPass, mAuthTokenType);
-
+                    result = sServerAuthenticate.userSignIn(userName, userPassword);
                     data.putString(AccountManager.KEY_ACCOUNT_NAME, userName);
-                    data.putString(AccountManager.KEY_ACCOUNT_TYPE, accountType);
-                    data.putString(AccountManager.KEY_AUTHTOKEN, authtoken);
-                    data.putString(PARAM_USER_PASS, userPass);
+                    data.putBoolean("result", result);
 
                 } catch (Exception e) {
-                    data.putString(KEY_ERROR_MESSAGE, e.getMessage());
+                    data.putString("error_msg", e.getMessage());
+                    data.putBoolean("result", false);
                 }
 
                 final Intent res = new Intent();
@@ -98,10 +106,12 @@ public class LoginActivity extends AccountAuthenticatorActivity {
 
             @Override
             protected void onPostExecute(Intent intent) {
-                if (intent.hasExtra(KEY_ERROR_MESSAGE)) {
-                    Toast.makeText(getBaseContext(), intent.getStringExtra(KEY_ERROR_MESSAGE), Toast.LENGTH_SHORT).show();
-                } else {
+                if (intent.hasExtra("error_msg")) {
+                    Toast.makeText(getBaseContext(), intent.getStringExtra("error_msg"), Toast.LENGTH_SHORT).show();
+                } else if (intent.getBooleanExtra("result", false) == true) {
                     finishLogin(intent);
+                } else {
+                    Toast.makeText(getBaseContext(), "wrong password or name", Toast.LENGTH_SHORT).show();
                 }
             }
         }.execute();
@@ -109,23 +119,10 @@ public class LoginActivity extends AccountAuthenticatorActivity {
 
     private void finishLogin(Intent intent) {
         String accountName = intent.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
-        String accountPassword = intent.getStringExtra(PARAM_USER_PASS);
-        final Account account = new Account(accountName, intent.getStringExtra(AccountManager.KEY_ACCOUNT_TYPE));
-
-        if (getIntent().getBooleanExtra(ARG_IS_ADDING_NEW_ACCOUNT, false)) {
-            String authtoken = intent.getStringExtra(AccountManager.KEY_AUTHTOKEN);
-            String authtokenType = mAuthTokenType;
-
-            // Creating the account on the device and setting the auth token we got
-            // (Not setting the auth token will cause another call to the server to authenticate the user)
-            mAccountManager.addAccountExplicitly(account, accountPassword, null);
-            mAccountManager.setAuthToken(account, authtokenType, authtoken);
-        } else {
-            mAccountManager.setPassword(account, accountPassword);
-        }
-
-        setAccountAuthenticatorResult(intent.getExtras());
+        Account newAccount = new Account(accountName, "example.com");
+        mAccountManager.addAccountExplicitly(newAccount, "com", null);
         setResult(RESULT_OK, intent);
+        startActivity(new Intent(this, MainActivity.class));
         finish();
     }
 }

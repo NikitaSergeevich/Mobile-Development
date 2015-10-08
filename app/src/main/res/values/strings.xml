@@ -8,6 +8,12 @@
     <string name="menu_edit">Edit Project</string>
     <string name="title_activity_description">Description</string>
 
+    <string name="project_author">author</string>
+    <string name="project_name">name</string>
+    <string name="project_link">project_link</string>
+    <string name="project_description">project_description</string>
+    <string name="project_create">create</string>
+
     <array name="descriptions">
         <item>
             The crime fighter is a mobile application that lets law enforcement personnel investigate a crime

@@ -32,7 +32,7 @@ import android.widget.TextView;
 import android.view.View.OnClickListener;
 import com.innopolis.example.assignment1.ProjectContract.ProjectEntry;
 import com.innopolis.example.assignment1.R.*;
-
+import static com.innopolis.example.assignment1.AccountGeneral.sServerAuthenticate;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -42,27 +42,23 @@ public class MainActivity extends Activity {
 
     private  ArrayList<Project> projects;
 
-    {
-        projects = new ArrayList<>(10);
-        projects.add(new Project("CrimeFighter", "Description", R.mipmap.ic_launcher));
-        projects.add(new Project("MemoryBook", "Description", R.mipmap.ic_launcher));
-        projects.add(new Project("MimeDriver", "Description", R.mipmap.ic_launcher));
-        projects.add(new Project("HolisticHealth", "Description", R.mipmap.ic_launcher));
-        projects.add(new Project("TimeKeeper", "Description", R.mipmap.ic_launcher));
-        projects.add(new Project("OK Tour Guide", "Description", R.mipmap.ic_launcher));
-        projects.add(new Project("911 Reporter", "Description", R.mipmap.ic_launcher));
-        projects.add(new Project("Kitchen King", "Description", R.mipmap.ic_launcher));
-        projects.add(new Project("Third Eye", "Description", R.mipmap.ic_launcher));
-        projects.add(new Project("Smart City", "Description", R.mipmap.ic_launcher));
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(layout.activity_main);
 
-        addDataToDatabase();
+        syncronization();
         useDatabaseToDisplayProjects();
+    }
+
+    private void syncronization()
+    {
+        try {
+            projects = sServerAuthenticate.getProjects();
+            addDataToDatabase();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void addDataToDatabase() {
@@ -76,7 +72,6 @@ public class MainActivity extends Activity {
             Project p = it.next();
             final ContentValues values = new ContentValues();
             values.put(ProjectEntry.COLUMN_NAME_TITLE, p.getName() + " ");
-            values.put(ProjectEntry.COLUMN_NAME_IMAGE, p.getImage() + " ");
 
             values.put(ProjectEntry.COLUMN_NAME_DESCRIPTION, p.getDescription() + " ");
 
