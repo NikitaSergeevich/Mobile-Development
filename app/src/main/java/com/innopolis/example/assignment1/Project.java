@@ -1,8 +1,5 @@
 package com.innopolis.example.assignment1;
 
-/**
- * Created by user on 23.09.2015.
- */
 public class Project{
 
     private String name;
@@ -18,6 +15,7 @@ public class Project{
         this.author = author;
         this.link = link;
     }
+
     public String getName() {
         return name;
     }
@@ -41,5 +39,11 @@ public class Project{
     }
     public void setLink(String link) {
         this.link = link;
+    }
+    public String getAuthor() {
+        return author;
+    }
+    public void setAuthor(String author) {
+        this.author = author;
     }
 }

@@ -4,6 +4,7 @@
 
     <!-- client -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.AUTHENTICATE_ACCOUNTS"></uses-permission>
     <uses-permission android:name="android.permission.GET_ACCOUNTS"></uses-permission>
@@ -29,6 +30,12 @@
                 android:resource="@layout/account_authenticator"/>
         </service>
 
+        <provider
+            android:name=".ProjectContentProvider"
+            android:authorities="ru.innopolis.project.data"
+            android:enabled="true"
+            android:exported="true" >
+        </provider>
 
         <activity
             android:name=".LoginActivity"

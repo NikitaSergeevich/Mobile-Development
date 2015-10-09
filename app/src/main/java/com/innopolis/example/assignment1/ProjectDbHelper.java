@@ -16,7 +16,8 @@ public class ProjectDbHelper extends SQLiteOpenHelper {
             "CREATE TABLE " + ProjectEntry.TABLE_NAME + " (" +
                     ProjectEntry._ID + " INTEGER PRIMARY KEY," +
                     ProjectEntry.COLUMN_NAME_TITLE + " TEXT," +
-                    ProjectEntry.COLUMN_NAME_IMAGE + " INTEGER," +
+                    ProjectEntry.COLUMN_NAME_AUTHOR + " TEXT," +
+                    ProjectEntry.COLUMN_NAME_LINK + " TEXT," +
                     ProjectEntry.COLUMN_NAME_DESCRIPTION + " TEXT" +
                     " )";
 

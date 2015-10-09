@@ -20,6 +20,8 @@ import java.util.ArrayList;
 
 public class ServerHelper{
 
+    private String[] jsonprojectfields = {"author", "description", "title", "link"};
+
     public boolean userSignUp(String user, String email) throws Exception {
         JSONObject jsonParam = new JSONObject();
         JSONArray array = null;
@@ -60,9 +62,18 @@ public class ServerHelper{
     }
 
     public ArrayList<Project> getProjects() throws Exception {
-        String request = "https://api.parse.com/1/classes/Projects";
+        String request = "https://api.parse.com/1/classes/Project/";
         HttpURLConnection connection = request(request, "GET", null);
-        return parseProjects(connection);
+
+        final int statusCode = connection.getResponseCode();
+        switch (statusCode)
+        {
+            case HttpURLConnection.HTTP_OK:
+                return parseProjects(connection);
+            default:
+                break;
+        }
+        return null;
     }
 
     public HttpURLConnection request(String request, String method, JSONObject params) throws Exception
@@ -121,12 +132,21 @@ public class ServerHelper{
             JSONArray array	= json.getJSONArray("results");
             for (int i = 0; i < array.length(); i++)
             {
-                String author = array.getJSONObject(i).getString("author");
-                String description = array.getJSONObject(i).getString("description");
-                String name = array.getJSONObject(i).getString("title");
-                String link = array.getJSONObject(i).getString("link");
-                String objectId = array.getJSONObject(i).getString("objectId");
-                data.add(new Project(name, description, author, link));
+                JSONObject obj = array.getJSONObject(i);
+                ArrayList<String> jsonparsed = new ArrayList<String>();
+                for (String field : jsonprojectfields)
+                {
+                    if (!obj.isNull(field))
+                    {
+                        jsonparsed.add(obj.getString(field));
+                    }
+                    else
+                    {
+                        jsonparsed.add("");
+                    }
+                }
+                if (!jsonparsed.get(2).equals(""))
+                    data.add(new Project(jsonparsed.get(2), jsonparsed.get(1), jsonparsed.get(0), jsonparsed.get(3)));
             }
         } catch (JSONException e) {
             e.printStackTrace();

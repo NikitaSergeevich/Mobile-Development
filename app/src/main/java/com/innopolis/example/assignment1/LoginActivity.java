@@ -84,7 +84,6 @@ public class LoginActivity extends AccountAuthenticatorActivity {
         final String userPassword = ((TextView) findViewById(R.id.accountPassword)).getText().toString();
 
         new AsyncTask<String, Void, Intent>() {
-
             @Override
             protected Intent doInBackground(String... params) {
                 Bundle data = new Bundle();
