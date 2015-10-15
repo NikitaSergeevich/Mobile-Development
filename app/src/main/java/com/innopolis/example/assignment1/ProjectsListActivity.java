@@ -2,8 +2,10 @@ package com.innopolis.example.assignment1;
 
 import android.app.Activity;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.ContentObserver;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -22,17 +24,18 @@ import android.widget.SimpleCursorAdapter;
 import android.app.LoaderManager;
 import android.content.Loader;
 
-
-
-
-import static com.innopolis.example.assignment1.AccountGeneral.sServerAuthenticate;
 import java.util.ArrayList;
+
+import com.innopolis.example.assignment1.Const.Code;
+import com.innopolis.example.assignment1.Const.Key;
 import com.innopolis.example.assignment1.ProjectContract.ProjectEntry;
 import com.innopolis.example.assignment1.R.*;
+import com.innopolis.example.assignment1.Utils.ServerHelper;
+
 import android.widget.Toast;
 
 
-public class MainActivity extends Activity implements LoaderManager.LoaderCallbacks<Cursor>{
+public class ProjectsListActivity extends Activity implements LoaderManager.LoaderCallbacks<Cursor>{
 
     private  ArrayList<Project> projects;
     private SimpleCursorAdapter mAdapter;
@@ -40,7 +43,7 @@ public class MainActivity extends Activity implements LoaderManager.LoaderCallba
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(layout.activity_main);
+        setContentView(layout.activity_projects_list);
 
         synchronization();
         //setupListView();
@@ -56,7 +59,7 @@ public class MainActivity extends Activity implements LoaderManager.LoaderCallba
                     Bundle data = new Bundle();
                     boolean result = false;
                     try {
-                        projects = sServerAuthenticate.getProjects();
+                        projects = ServerHelper.getProjects();
                         data.putBoolean("result", true);
                     } catch (Exception e) {
                         data.putString("error_msg", e.getMessage());
@@ -76,7 +79,7 @@ public class MainActivity extends Activity implements LoaderManager.LoaderCallba
                     else {
                         addDataToDatabase();
                         setupListView();
-                        getLoaderManager().initLoader(0, null, MainActivity.this);
+                        getLoaderManager().initLoader(0, null, ProjectsListActivity.this);
                     }
                 }
             }.execute();
@@ -141,7 +144,7 @@ public class MainActivity extends Activity implements LoaderManager.LoaderCallba
         cursor.registerContentObserver(new ContentObserver(new Handler()) {
             @Override
             public void onChange(boolean selfChange) {
-                getLoaderManager().restartLoader(0, null, MainActivity.this);
+                getLoaderManager().restartLoader(0, null, ProjectsListActivity.this);
             }
         });
 
@@ -171,11 +174,11 @@ public class MainActivity extends Activity implements LoaderManager.LoaderCallba
         long _id = info.id;
         switch (item.getItemId()){
             case id.project_add:
-                Intent intent = new Intent(MainActivity.this, CreateModify.class);
+                Intent intent = new Intent(ProjectsListActivity.this, CreateModify.class);
                 startActivityForResult(intent, 1);
                 return true;
             case id.project_delete:
-                ProjectContract.removeProject(MainActivity.this, _id);
+                ProjectContract.removeProject(ProjectsListActivity.this, _id);
             case id.project_edit:
                 return true;
             default:
@@ -221,6 +224,15 @@ public class MainActivity extends Activity implements LoaderManager.LoaderCallba
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public void logoff(View view) {
+        SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.remove(Key.USERNAME);
+
+        final Intent intent = new Intent(this, LoginActivity.class);
+        startActivity(intent); //todo: seem like not proper way. One visible issue - back button would work;
     }
 
 }

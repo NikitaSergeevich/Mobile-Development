@@ -1,127 +1,139 @@
 package com.innopolis.example.assignment1;
 
-import android.accounts.Account;
-import android.accounts.AccountAuthenticatorActivity;
-import android.app.DialogFragment;
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
-import android.accounts.AccountManager;
-import android.widget.TextView;
-import android.widget.Toast;
-import static com.innopolis.example.assignment1.AccountGeneral.sServerAuthenticate;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ProgressBar;
 
-public class LoginActivity extends AccountAuthenticatorActivity {
-    private AccountManager mAccountManager;
-    private DialogFragment dialog;
-    private final int REQ_SIGNUP = 1;
+import com.innopolis.example.assignment1.Const.Api;
+import com.innopolis.example.assignment1.Const.Key;
+import com.innopolis.example.assignment1.Dto.UserDto;
+import com.innopolis.example.assignment1.Utils.JSONParser;
+import com.innopolis.example.assignment1.Utils.ServerHelper;
+
+
+public class LoginActivity extends Activity {
+    private static final String DEBUG_TAG = "DEBUG";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.login);
-        dialog = new NetworkDialog();
-        dialog.setCancelable(false);
-        if (!networkcheck(this))
-        {
-            dialog.show(getFragmentManager(), "Connecting to Network");
-        }
 
-        mAccountManager = AccountManager.get(this);
-        findViewById(R.id.login).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                submit();
-            }
-        });
+        SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+        String currentUserName = sharedPref.getString(Key.USERNAME, null);
+        if (currentUserName != null)
+            gotoProjects();
+    }
 
-        findViewById(R.id.signup).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent signup = new Intent(getBaseContext(), SignUpActivity.class);
-                //signup.putExtras(getIntent().getExtras());
-                startActivityForResult(signup, REQ_SIGNUP);
-            }
-        });
+    private void gotoProjects(){
+        final Intent intent = new Intent(this, ProjectsListActivity.class);
+        startActivity(intent); //todo: seem like not proper way. One visible issue - back button would work;
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        // The sign up activity returned that the user has successfully created an account
-        if (requestCode == REQ_SIGNUP && resultCode == RESULT_OK) {
-            finishLogin(data);
-        } else
-            super.onActivityResult(requestCode, resultCode, data);
-    }
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
 
-    private boolean networkcheck(Context context)
-    {
-        ConnectivityManager connMgr	= (ConnectivityManager)
-                getSystemService(context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo	=
-                connMgr.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-        boolean	isWifiConn = networkInfo.isConnected();
-        networkInfo	= connMgr.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
-        boolean	isMobileConn = networkInfo.isConnected();
-
-        if (isWifiConn == true | isMobileConn == true)
-        {
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_settings) {
             return true;
         }
-        else
-        {
-            return false;
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    public void login(View view) {
+        blockUI();
+
+        final EditText loginUsername = (EditText)findViewById(R.id.login_username);
+        final EditText loginPassword = (EditText)findViewById(R.id.login_password);
+
+        new LoginTask().execute(loginUsername.getText().toString(), loginPassword.getText().toString());
+    }
+
+    private void blockUI(){
+        final Button loginButton = (Button) findViewById(R.id.login_submit);
+        loginButton.setVisibility(View.GONE);
+
+        final ProgressBar loginProgress = (ProgressBar) findViewById(R.id.login_progress);
+        loginProgress.setVisibility(View.VISIBLE);
+    }
+
+    private void unblockUI(){
+        final ProgressBar loginProgress = (ProgressBar) findViewById(R.id.login_progress);
+        loginProgress.setVisibility(View.GONE);
+
+        final Button loginButton = (Button) findViewById(R.id.login_submit);
+        loginButton.setVisibility(View.VISIBLE);
+    }
+
+    private class LoginTask extends AsyncTask<String, Void, Boolean> {
+        @Override
+        protected Boolean doInBackground(String... params) {
+            // params comes from the execute() call: params[0]
+            return authorize(params[0], params[1]);
+        }
+        // onPostExecute displays the results of the AsyncTask.
+
+        @Override
+        protected void onPostExecute(Boolean authorized) {
+            if (authorized)
+                gotoProjects();
+            else
+                unblockUI();
         }
     }
 
-    public void submit() {
+    private boolean authorize(String userName, String userId)  {
+        if (ServerHelper.connectionIsAvailable(this) == false) //inform user that phone has no internet connection available
+        {
+            Log.w("AUTH", "No connection");
+            return false;
+        }
 
-        final String userName = ((TextView) findViewById(R.id.accountName)).getText().toString();
-        final String userPassword = ((TextView) findViewById(R.id.accountPassword)).getText().toString();
+        String userDataResponse = ServerHelper.makeGETRequest(Api.UsersUrl + userId);
+        if (userDataResponse == null) //inform user that connection was not successfull
+        {
+            Log.w("AUTH", "No response");
+            return false;
+        }
 
-        new AsyncTask<String, Void, Intent>() {
-            @Override
-            protected Intent doInBackground(String... params) {
-                Bundle data = new Bundle();
-                boolean result = false;
-                try {
-                    result = sServerAuthenticate.userSignIn(userName, userPassword);
-                    data.putString(AccountManager.KEY_ACCOUNT_NAME, userName);
-                    data.putBoolean("result", result);
+        UserDto user = JSONParser.parseUser(userDataResponse);
+        if (user == null) //inform user that password not right
+        {
+            Log.w("AUTH", "No user");
+            return false;
+        }
 
-                } catch (Exception e) {
-                    data.putString("error_msg", e.getMessage());
-                    data.putBoolean("result", false);
-                }
+        if (!user.Name.toLowerCase().equals(userName.toLowerCase())) //inform user that password not right
+        {
+            Log.w("AUTH", "Wrong pass or username");
+            return false;
+        }
 
-                final Intent res = new Intent();
-                res.putExtras(data);
-                return res;
-            }
+        //save user in preferences
+        SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putString(Key.USERNAME, user.Name);
+        editor.commit();
 
-            @Override
-            protected void onPostExecute(Intent intent) {
-                if (intent.hasExtra("error_msg")) {
-                    Toast.makeText(getBaseContext(), intent.getStringExtra("error_msg"), Toast.LENGTH_SHORT).show();
-                } else if (intent.getBooleanExtra("result", false) == true) {
-                    finishLogin(intent);
-                } else {
-                    Toast.makeText(getBaseContext(), "wrong password or name", Toast.LENGTH_SHORT).show();
-                }
-            }
-        }.execute();
+        return true;
     }
 
-    private void finishLogin(Intent intent) {
-        String accountName = intent.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
-        Account newAccount = new Account(accountName, "example.com");
-        mAccountManager.addAccountExplicitly(newAccount, "com", null);
-        setResult(RESULT_OK, intent);
-        startActivity(new Intent(this, MainActivity.class));
-        finish();
+    public void gotoSignup(View view) {
+        final Intent intent = new Intent(this, SignUpActivity.class);
+        startActivity(intent);
     }
 }
